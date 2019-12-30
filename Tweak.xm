@@ -1,147 +1,136 @@
-#import <Tweak.h>
+#import "Tweak.h"
 
-BOOL isDragging = NO;
-BOOL hasFullyLoaded = NO;
-BOOL isUsingGoodges = NO;
+static BOOL isDragging;
+static BOOL enabled;
+static double delay;
 
-BOOL enabled;
-double delay;
 
-%hook SBFolderView
--(void)pageControl:(id)arg1 didRecieveTouchInDirection:(int)arg2 {
-	%orig;
-	[self _prepareHideLabels];
+static BOOL isDeviceLocked() {
+    SpringBoard *springBoard = (SpringBoard *)[%c(SpringBoard) sharedApplication];
+    return [[springBoard pluginUserAgent] deviceIsLocked];   
 }
-
--(void)scrollViewDidEndDragging:(id)arg1 willDecelerate:(_Bool)arg2 {
-	%orig;
-	[self _prepareHideLabels];
-}
-
--(void)scrollViewWillBeginDragging:(id)arg1 {
-	%orig;
-	isDragging = YES;
-	[self _showLabels];
-}
-
--(void)layoutSubviews {
-	%orig;
-	// Nasty workaround because this method gets called several times in a row
-	// and we are unable to know which one is the one we actually need (homescreen became visible)
-	if (delay >= 2.0) {
-		[self _prepareHideLabels];
-	} else {
-		[self _hideLabels];
-	}
-
-}
-
-%new
--(void)_prepareHideLabels {
-	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(_hideLabels) object:nil];
-	[self performSelector:@selector(_hideLabels) withObject:nil afterDelay:delay];
-}
-
-%new
--(void)_hideLabels {
-	animateIconLabelAlpha(0);
-	isDragging = NO;
-}
-
-%new
--(void)_showLabels {
-	animateIconLabelAlpha(1);
-}
-%end
-
-%hook SBIconView
--(void)layoutSubviews {
-	%orig;
-
-	// If we are using Goodges, we have to update the visibility whenever the badgeValue changes
-	if (hasFullyLoaded && isUsingGoodges && !isDragging) {
-		SBIconController *controller = [%c(SBIconController) sharedInstance];
-		SBRootIconListView *rootView = [controller currentRootIconList];
-
-		NSArray *icons = [rootView icons];
-		SBIcon *icon = [self icon];
-
-		// Update only the icon page thats currently visible
-		if (![icons containsObject:icon]) return;
-
-		int badgeValue = (int)[icon badgeValue];
-
-		if (badgeValue < 1) {
-			[self setIconLabelAlpha: 0];
-		} else {
-			[self setIconLabelAlpha: 1];
-		}
-	}
-}
-%end
-
-%hook SpringBoard
-- (void)applicationDidFinishLaunching:(id)application {
-    %orig;
-
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^(void) {
-        hasFullyLoaded = YES;
-    });
-}
-%end
 
 static void animateIconLabelAlpha(double alpha) {
-	SBIconController *controller = [%c(SBIconController) sharedInstance];
-	SBRootIconListView *rootView = [controller currentRootIconList];
+    SBIconController *iconController = [%c(SBIconController) sharedInstance];
+    SBRootFolderController *rootFolderController = [iconController _rootFolderController];
+    SBIconListView *listView = rootFolderController.currentIconListView;
 
-	NSArray *icons = [rootView icons];
-	SBIconViewMap* map = [rootView viewMap];
-
-	[UIView animateWithDuration:0.5 animations:^{
-		for(SBIcon *icon in icons) {
-			SBIconView *iconView = [map mappedIconViewForIcon:icon];
-
-			int badgeValue = (int)[icon badgeValue];
-			if (!isUsingGoodges || badgeValue < 1) {
-				[iconView setIconLabelAlpha: alpha];
-			} else {
-				[iconView setIconLabelAlpha: 1];
-			}
-		}
-	}];
+    [UIView animateWithDuration:0.5 animations:^{
+        [listView setIconsLabelAlpha:alpha];
+    }];
 }
 
+%hook SBRootFolderView
+
+/* iOS 12 and earlier */
+%group iOS12
+- (id)initWithFolder:(id)arg1 orientation:(long long)arg2 viewMap:(id)arg3 forSnapshot:(BOOL)arg4 {
+    self = %orig;
+    [self _subscribeToHomescreenDisplayChange];
+    return self;
+}
+%end
+
+/* iOS 13 */
+%group iOS13
+- (id)initWithConfiguration:(id)configuration {
+    self = %orig;
+    [self _subscribeToHomescreenDisplayChange];
+    return self;
+}
+%end
+
+%new
+- (void)_subscribeToHomescreenDisplayChange {
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(_displayChanged:)
+                                                 name:kSBHomescreenDisplayChangedNotification
+                                               object:nil];
+}
+
+/* This is called when leaving or entering the homescreen */
+%new
+- (void)_displayChanged:(NSNotification *)notification {
+    if (!isDeviceLocked()) {
+        /* This is not perfect, but the labels are made visible on iOS 13
+           shortly before this delay by iOS itself. Hence, using anything
+           lower than 1.5 s causes it to dim and then shortly after being
+           visible again. Inspective-C is not supporting iOS 13, so nuking
+           the method that makes them visible is not easily done. */
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            [self _prepareHideLabels];
+        });
+    }
+}
+
+- (void)pageControl:(id)pageControl didRecieveTouchInDirection:(int)direction {
+    %orig;
+    [self _prepareHideLabels];
+}
+
+- (void)scrollViewDidEndDragging:(id)scrollView willDecelerate:(BOOL)decelerate {
+    %orig;
+    [self _prepareHideLabels];
+}
+
+- (void)scrollViewWillBeginDragging:(id)scrollView {
+    %orig;
+    isDragging = YES;
+    [self _showLabels];
+}
+
+%new
+- (void)_prepareHideLabels {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(_hideLabels) object:nil];
+    [self performSelector:@selector(_hideLabels) withObject:nil afterDelay:delay];
+}
+
+%new
+- (void)_hideLabels {
+    animateIconLabelAlpha(0);
+    isDragging = NO;
+}
+
+%new
+- (void)_showLabels {
+    animateIconLabelAlpha(1);
+}
+
+%end
+
 // ===== PREFERENCE HANDLING ===== //
-
 static void loadPrefs() {
-  NSMutableDictionary *prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:@"/var/mobile/Library/Preferences/com.noisyflake.shylabels.plist"];
+    NSMutableDictionary *prefs = [NSMutableDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.noisyflake.shylabels.plist"];
 
-  if (prefs) {
-    enabled = ( [prefs objectForKey:@"enabled"] ? [[prefs objectForKey:@"enabled"] boolValue] : YES );
-    delay = ( [prefs objectForKey:@"delay"] ? [[prefs objectForKey:@"delay"] doubleValue] : 1.0 );
-  }
-
+    if (prefs) {
+        enabled = prefs[@"enabled"] ? [prefs[@"enabled"] boolValue] : YES;
+        delay = prefs[@"delay"] ? [prefs[@"delay"] doubleValue] : 1.0;
+    }
 }
 
 static void initPrefs() {
-  // Copy the default preferences file when the actual preference file doesn't exist
-  NSString *path = @"/User/Library/Preferences/com.noisyflake.shylabels.plist";
-  NSString *pathDefault = @"/Library/PreferenceBundles/ShyLabels.bundle/defaults.plist";
-  NSFileManager *fileManager = [NSFileManager defaultManager];
-  if (![fileManager fileExistsAtPath:path]) {
-    [fileManager copyItemAtPath:pathDefault toPath:path error:nil];
-  }
+    // Copy the default preferences file when the actual preference file doesn't exist
+    NSString *path = @"/User/Library/Preferences/com.noisyflake.shylabels.plist";
+    NSString *pathDefault = @"/Library/PreferenceBundles/ShyLabels.bundle/defaults.plist";
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    if (![fileManager fileExistsAtPath:path])
+        [fileManager copyItemAtPath:pathDefault toPath:path error:nil];
 }
 
 %ctor {
-	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)loadPrefs, CFSTR("com.noisyflake.shylabels/prefsupdated"), NULL, CFNotificationSuspensionBehaviorCoalesce);
-	initPrefs();
-	loadPrefs();
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL,
+                                    (CFNotificationCallback)loadPrefs,
+                                    CFSTR("com.noisyflake.shylabels/prefsupdated"),
+                                    NULL,
+                                    CFNotificationSuspensionBehaviorCoalesce);
+    initPrefs();
+    loadPrefs();
 
-	NSFileManager *fileManager = [NSFileManager defaultManager];
-	isUsingGoodges = [fileManager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/Goodges.dylib"];
-
-	if(enabled) {
-		%init(_ungrouped);
-	}
+    if (enabled) {
+        if ([%c(SBRootFolderView) instancesRespondToSelector:@selector(initWithConfiguration:)])
+            %init(iOS13);
+        else if ([%c(SBRootFolderView) instancesRespondToSelector:@selector(initWithFolder:orientation:viewMap:forSnapshot:)])
+            %init(iOS12);
+        %init;
+    }
 }

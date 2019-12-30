@@ -1,13 +1,35 @@
-#import <SpringBoard/SBIcon.h>
-#import <SpringBoard/SBIconView.h>
-#import <SpringBoard/SBFolderView.h>
-#import <SpringBoard/SBIconController.h>
-#import <SpringBoard/SBIconViewMap.h>
+#define kSBHomescreenDisplayChangedNotification @"SBHomescreenDisplayChangedNotification"
 
-@interface SBFolderView (ShyPageDots)
--(void)_prepareHideLabels;
--(void)_hideLabels;
--(void)_showLabels;
+#import <SpringBoard/SBUserAgent.h>
+@interface SpringBoard : NSObject
+- (SBUserAgent *)pluginUserAgent;
 @end
 
-static void animateIconLabelAlpha(double alpha);
+@interface SBIconListView : UIView
+- (void)setIconsLabelAlpha:(double)alpha;
+@end
+
+@interface SBRootIconListView : SBIconListView
+@end
+
+@interface SBFolderController : UIViewController
+@end
+
+@interface SBRootFolderController : SBFolderController
+@property (nonatomic, readonly) SBIconListView *currentIconListView;
+@end
+
+@interface SBIconController : NSObject
++ (id)sharedInstance;
+- (SBRootFolderController *)_rootFolderController;
+@end
+
+@interface SBRootFolderView : UIView
+@end
+
+@interface SBRootFolderView (ShyLabels)
+- (void)_subscribeToHomescreenDisplayChange;
+- (void)_prepareHideLabels;
+- (void)_hideLabels;
+- (void)_showLabels;
+@end
