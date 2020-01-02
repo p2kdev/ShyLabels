@@ -57,11 +57,15 @@ static void animateIconLabelAlpha(double alpha) {
            lower than 1.5 s causes it to dim and then shortly after being
            visible again. Inspective-C is not supporting iOS 13, so nuking
            the method that makes them visible is not easily done. */
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, MAX(1.5, delay) * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
             [self _prepareHideLabels];
         });
     }
 }
+
+%end
+
+%hook SBFolderView
 
 - (void)pageControl:(id)pageControl didRecieveTouchInDirection:(int)direction {
     %orig;
