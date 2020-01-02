@@ -9,27 +9,18 @@
 - (void)setIconsLabelAlpha:(double)alpha;
 @end
 
-@interface SBRootIconListView : SBIconListView
-@end
-
-@interface SBFolderController : UIViewController
-@end
-
-@interface SBRootFolderController : SBFolderController
+@interface SBFolderView : UIView
 @property (nonatomic, readonly) SBIconListView *currentIconListView;
 @end
 
-@interface SBIconController : NSObject
-+ (id)sharedInstance;
-- (SBRootFolderController *)_rootFolderController;
-@end
-
-@interface SBRootFolderView : UIView
-@end
-
-@interface SBRootFolderView (ShyLabels)
+@interface SBFolderView (ShyLabels)
 - (void)_subscribeToHomescreenDisplayChange;
 - (void)_prepareHideLabels;
 - (void)_hideLabels;
 - (void)_showLabels;
+- (void)_animateIconLabelsAlpha:(double)alpha;
+@end
+
+
+@interface SBRootFolderView : SBFolderView
 @end

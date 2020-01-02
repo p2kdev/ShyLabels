@@ -10,16 +10,6 @@ static BOOL isDeviceLocked() {
     return [[springBoard pluginUserAgent] deviceIsLocked];   
 }
 
-static void animateIconLabelAlpha(double alpha) {
-    SBIconController *iconController = [%c(SBIconController) sharedInstance];
-    SBRootFolderController *rootFolderController = [iconController _rootFolderController];
-    SBIconListView *listView = rootFolderController.currentIconListView;
-
-    [UIView animateWithDuration:0.5 animations:^{
-        [listView setIconsLabelAlpha:alpha];
-    }];
-}
-
 %hook SBRootFolderView
 
 /* iOS 12 and earlier */
@@ -39,6 +29,13 @@ static void animateIconLabelAlpha(double alpha) {
     return self;
 }
 %end
+
+%new
+- (void)_animateIconLabelsAlpha:(double)alpha {
+    [UIView animateWithDuration:0.5 animations:^{
+        [self.currentIconListView setIconsLabelAlpha:alpha];
+    }];
+}
 
 %new
 - (void)_subscribeToHomescreenDisplayChange {
@@ -91,13 +88,13 @@ static void animateIconLabelAlpha(double alpha) {
 
 %new
 - (void)_hideLabels {
-    animateIconLabelAlpha(0);
+    [self _animateIconLabelsAlpha:0.0f];
     isDragging = NO;
 }
 
 %new
 - (void)_showLabels {
-    animateIconLabelAlpha(1);
+    [self _animateIconLabelsAlpha:1.0f];
 }
 
 %end
@@ -131,9 +128,9 @@ static void initPrefs() {
     loadPrefs();
 
     if (enabled) {
-        if ([%c(SBRootFolderView) instancesRespondToSelector:@selector(initWithConfiguration:)])
+        if ([%c(SBFolderView) instancesRespondToSelector:@selector(initWithConfiguration:)])
             %init(iOS13);
-        else if ([%c(SBRootFolderView) instancesRespondToSelector:@selector(initWithFolder:orientation:viewMap:forSnapshot:)])
+        else if ([%c(SBFolderView) instancesRespondToSelector:@selector(initWithFolder:orientation:viewMap:forSnapshot:)])
             %init(iOS12);
         %init;
     }
