@@ -101,7 +101,7 @@ static BOOL isDeviceLocked() {
 
 // ===== PREFERENCE HANDLING ===== //
 static void loadPrefs() {
-    NSMutableDictionary *prefs = [NSMutableDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.noisyflake.shylabels.plist"];
+    NSMutableDictionary *prefs = [NSMutableDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/se.nosskirneh.shylabels.plist"];
 
     if (prefs) {
         enabled = prefs[@"enabled"] ? [prefs[@"enabled"] boolValue] : YES;
@@ -111,21 +111,22 @@ static void loadPrefs() {
 
 static void initPrefs() {
     // Copy the default preferences file when the actual preference file doesn't exist
-    NSString *path = @"/User/Library/Preferences/com.noisyflake.shylabels.plist";
+    NSString *path = @"/User/Library/Preferences/se.nosskirneh.shylabels.plist";
     NSString *pathDefault = @"/Library/PreferenceBundles/ShyLabels.bundle/defaults.plist";
     NSFileManager *fileManager = [NSFileManager defaultManager];
     if (![fileManager fileExistsAtPath:path])
         [fileManager copyItemAtPath:pathDefault toPath:path error:nil];
+
+    loadPrefs();
 }
 
 %ctor {
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL,
                                     (CFNotificationCallback)loadPrefs,
-                                    CFSTR("com.noisyflake.shylabels/prefsupdated"),
+                                    CFSTR("se.nosskirneh.shylabels/prefsupdated"),
                                     NULL,
                                     CFNotificationSuspensionBehaviorCoalesce);
     initPrefs();
-    loadPrefs();
 
     if (enabled) {
         if ([%c(SBFolderView) instancesRespondToSelector:@selector(initWithConfiguration:)])
