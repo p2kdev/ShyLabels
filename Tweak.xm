@@ -1,6 +1,5 @@
 #import "Tweak.h"
 
-static BOOL isDragging;
 static BOOL enabled;
 static double delay;
 
@@ -76,7 +75,6 @@ static BOOL isDeviceLocked() {
 
 - (void)scrollViewWillBeginDragging:(id)scrollView {
     %orig;
-    isDragging = YES;
     [self _showLabels];
 }
 
@@ -89,7 +87,6 @@ static BOOL isDeviceLocked() {
 %new
 - (void)_hideLabels {
     [self _animateIconLabelsAlpha:0.0f];
-    isDragging = NO;
 }
 
 %new
