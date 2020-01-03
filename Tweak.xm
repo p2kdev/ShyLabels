@@ -9,6 +9,31 @@ static BOOL isDeviceLocked() {
     return [[springBoard pluginUserAgent] deviceIsLocked];   
 }
 
+static void animateIconListViewLabelsAlpha(SBIconListView *listView, double alpha) {
+    [UIView animateWithDuration:0.5 animations:^{
+        [listView setIconsLabelAlpha:alpha];
+    }];
+}
+
+static void prepareHideLabels(id self) {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(_hideLabels) object:nil];
+    [self performSelector:@selector(_hideLabels) withObject:nil afterDelay:delay];
+}
+
+%hook SBFolderController
+
+- (void)folderControllerDidOpen:(id)folderController {
+    %orig;
+    prepareHideLabels(self);
+}
+
+%new
+- (void)_hideLabels {
+    animateIconListViewLabelsAlpha(self.currentIconListView, 0.0f);
+}
+
+%end
+
 %hook SBRootFolderView
 
 /* iOS 12 and earlier */
@@ -30,11 +55,6 @@ static BOOL isDeviceLocked() {
 %end
 
 %new
-- (void)_animateIconLabelsAlpha:(double)alpha {
-    [UIView animateWithDuration:0.5 animations:^{
-        [self.currentIconListView setIconsLabelAlpha:alpha];
-    }];
-}
 
 %new
 - (void)_subscribeToHomescreenDisplayChange {
@@ -54,7 +74,7 @@ static BOOL isDeviceLocked() {
            visible again. Inspective-C is not supporting iOS 13, so nuking
            the method that makes them visible is not easily done. */
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, MAX(1.5, delay) * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            [self _prepareHideLabels];
+            prepareHideLabels(self);
         });
     }
 }
@@ -65,12 +85,12 @@ static BOOL isDeviceLocked() {
 
 - (void)pageControl:(id)pageControl didRecieveTouchInDirection:(int)direction {
     %orig;
-    [self _prepareHideLabels];
+    prepareHideLabels(self);
 }
 
 - (void)scrollViewDidEndDragging:(id)scrollView willDecelerate:(BOOL)decelerate {
     %orig;
-    [self _prepareHideLabels];
+    prepareHideLabels(self);
 }
 
 - (void)scrollViewWillBeginDragging:(id)scrollView {
@@ -79,19 +99,13 @@ static BOOL isDeviceLocked() {
 }
 
 %new
-- (void)_prepareHideLabels {
-    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(_hideLabels) object:nil];
-    [self performSelector:@selector(_hideLabels) withObject:nil afterDelay:delay];
-}
-
-%new
 - (void)_hideLabels {
-    [self _animateIconLabelsAlpha:0.0f];
+    animateIconListViewLabelsAlpha(self.currentIconListView, 0.0f);
 }
 
 %new
 - (void)_showLabels {
-    [self _animateIconLabelsAlpha:1.0f];
+    animateIconListViewLabelsAlpha(self.currentIconListView, 1.0f);
 }
 
 %end

@@ -9,6 +9,10 @@
 - (void)setIconsLabelAlpha:(double)alpha;
 @end
 
+@interface SBFolderController : NSObject
+@property (nonatomic, readonly) SBIconListView *currentIconListView;
+@end
+
 @interface SBFolderView : UIView
 @property (nonatomic, readonly) SBIconListView *currentIconListView;
 @end
