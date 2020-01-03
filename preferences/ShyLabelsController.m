@@ -22,7 +22,7 @@
 - (id)readPreferenceValue:(PSSpecifier*)specifier {
     NSString *path = [NSString stringWithFormat:@"/User/Library/Preferences/%@.plist", specifier.properties[@"defaults"]];
     NSDictionary *settings = [NSDictionary dictionaryWithContentsOfFile:path];
-    return (settings[specifier.properties[@"key"]]) ?: specifier.properties[@"default"];
+    return (settings[specifier.properties[@"key"]]) ? : specifier.properties[@"default"];
 }
 
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier*)specifier {

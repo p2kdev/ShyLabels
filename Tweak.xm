@@ -110,7 +110,8 @@ static void initPrefs() {
 }
 
 %ctor {
-    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL,
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+                                    NULL,
                                     (CFNotificationCallback)loadPrefs,
                                     CFSTR("se.nosskirneh.shylabels/prefsupdated"),
                                     NULL,
