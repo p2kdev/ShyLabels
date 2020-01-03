@@ -4,20 +4,19 @@ static BOOL enabled;
 static double delay;
 
 
-static BOOL isDeviceLocked() {
-    SpringBoard *springBoard = (SpringBoard *)[%c(SpringBoard) sharedApplication];
-    return [[springBoard pluginUserAgent] deviceIsLocked];   
-}
-
 static void animateIconListViewLabelsAlpha(SBIconListView *listView, double alpha) {
     [UIView animateWithDuration:0.5 animations:^{
         [listView setIconsLabelAlpha:alpha];
     }];
 }
 
-static void prepareHideLabels(id self) {
+static void prepareHideLabelsWithDelay(id self, double _delay) {
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(_hideLabels) object:nil];
-    [self performSelector:@selector(_hideLabels) withObject:nil afterDelay:delay];
+    [self performSelector:@selector(_hideLabels) withObject:nil afterDelay:_delay];
+}
+
+static void prepareHideLabels(id self) {
+    prepareHideLabelsWithDelay(self, delay);
 }
 
 %hook SBFolderController
@@ -34,49 +33,28 @@ static void prepareHideLabels(id self) {
 
 %end
 
-%hook SBRootFolderView
+%hook SBCoverSheetIconFlyInAnimator
 
-/* iOS 12 and earlier */
-%group iOS12
-- (id)initWithFolder:(id)arg1 orientation:(long long)arg2 viewMap:(id)arg3 forSnapshot:(BOOL)arg4 {
-    self = %orig;
-    [self _subscribeToHomescreenDisplayChange];
-    return self;
-}
-%end
+/* This method shows the labels after unlock. Thus, it needs to be nuked.
+   We also apply our own hide animation here. Another solution is to use
+   kSBLockScreenManagerUnlockAnimationDidFinish, but then that would
+   require to hook the init methods of SBRootFolderView, which is
+   different on iOS 13 and 12.
 
-/* iOS 13 */
-%group iOS13
-- (id)initWithConfiguration:(id)configuration {
-    self = %orig;
-    [self _subscribeToHomescreenDisplayChange];
-    return self;
-}
-%end
+   While the SBCoverSheetIconFlyInAnimator object itself has a property
+   to the `iconListView`, the SBRootFolderView is used as it will use
+   the same performSelector queue as when scrolling.
 
-%new
+   The choices above seems to result in the most elegant solution. */
+- (void)_cleanupAnimation {
+    SBIconController *iconController = [%c(SBIconController) sharedInstance];
+    SBRootFolderController *rootFolderController = iconController.rootFolderController;
 
-%new
-- (void)_subscribeToHomescreenDisplayChange {
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(_displayChanged:)
-                                                 name:kSBHomescreenDisplayChangedNotification
-                                               object:nil];
-}
-
-/* This is called when leaving or entering the homescreen */
-%new
-- (void)_displayChanged:(NSNotification *)notification {
-    if (!isDeviceLocked()) {
-        /* This is not perfect, but the labels are made visible on iOS 13
-           shortly before this delay by iOS itself. Hence, using anything
-           lower than 1.5 s causes it to dim and then shortly after being
-           visible again. Inspective-C is not supporting iOS 13, so nuking
-           the method that makes them visible is not easily done. */
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, MAX(1.5, delay) * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            prepareHideLabels(self);
-        });
-    }
+    /* The 1.8f might seem like a magic number, but it was the measured
+       time of the unlock animation from start to finish. It was measured
+       from `SBBiometricEventLogger`'s method `_unlockAnimationWillStart`
+       to this _cleanupAnimation call. */
+    prepareHideLabelsWithDelay(rootFolderController.contentView, MAX(delay - 1.8f, 0));
 }
 
 %end
@@ -139,11 +117,6 @@ static void initPrefs() {
                                     CFNotificationSuspensionBehaviorCoalesce);
     initPrefs();
 
-    if (enabled) {
-        if ([%c(SBFolderView) instancesRespondToSelector:@selector(initWithConfiguration:)])
-            %init(iOS13);
-        else if ([%c(SBFolderView) instancesRespondToSelector:@selector(initWithFolder:orientation:viewMap:forSnapshot:)])
-            %init(iOS12);
+    if (enabled)
         %init;
-    }
 }
