@@ -61,7 +61,7 @@ static void prepareHideLabels(id self) {
 
 %hook SBFolderView
 
-- (void)pageControl:(id)pageControl didRecieveTouchInDirection:(int)direction {
+- (void)pageControl:(id)pageControl didReceiveTouchInDirection:(int)direction {
     %orig;
     prepareHideLabels(self);
 }
