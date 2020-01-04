@@ -35,26 +35,22 @@ static void prepareHideLabels(id self) {
 
 %hook SBCoverSheetIconFlyInAnimator
 
-/* This method shows the labels after unlock. Thus, it needs to be nuked.
-   We also apply our own hide animation here. Another solution is to use
-   kSBLockScreenManagerUnlockAnimationDidFinish, but then that would
-   require to hook the init methods of SBRootFolderView, which is
-   different on iOS 13 and 12.
+/* This method shows the labels after unlock. Our own hide animation
+   is applied here.
 
    While the SBCoverSheetIconFlyInAnimator object itself has a property
    to the `iconListView`, the SBRootFolderView is used as it will use
    the same performSelector queue as when scrolling.
 
-   The choices above seems to result in the most elegant solution. */
+   This seems to result in the most elegant solution. */
 - (void)_cleanupAnimation {
-    SBIconController *iconController = [%c(SBIconController) sharedInstance];
-    SBRootFolderController *rootFolderController = iconController.rootFolderController;
-
+    %orig;
     /* The 1.8f might seem like a magic number, but it was the measured
        time of the unlock animation from start to finish. It was measured
        from `SBBiometricEventLogger`'s method `_unlockAnimationWillStart`
-       to this _cleanupAnimation call. */
-    prepareHideLabelsWithDelay(rootFolderController.contentView, MAX(delay - 1.8f, 0));
+       to this call. */
+    SBIconController *iconController = [%c(SBIconController) sharedInstance];
+    prepareHideLabelsWithDelay(iconController.rootFolderController.contentView, MAX(delay - 1.8f, 0));
 }
 
 %end
