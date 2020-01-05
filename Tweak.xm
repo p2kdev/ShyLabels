@@ -19,6 +19,20 @@ static void prepareHideLabels(id self) {
     prepareHideLabelsWithDelay(self, delay);
 }
 
+/* Label are becoming visible after dismissing the force touch context
+   menu. This prevents that. */
+%group iOS13
+%hook SBIconView
+
+- (void)setIconLabelAlpha:(double)alpha {
+    if (self.showingContextMenu)
+        return;
+    %orig;
+}
+
+%end
+%end
+
 %hook SBFolderController
 
 - (void)folderControllerDidOpen:(id)folderController {
@@ -114,6 +128,9 @@ static void initPrefs() {
                                     CFNotificationSuspensionBehaviorCoalesce);
     initPrefs();
 
-    if (enabled)
+    if (enabled) {
         %init;
+        if (@available(iOS 13, *))
+            %init(iOS13);
+    }
 }

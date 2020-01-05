@@ -26,3 +26,9 @@
 - (void)_showLabels;
 - (void)_animateIconLabelsAlpha:(double)alpha;
 @end
+
+
+@interface SBIconView
+@property (getter=isShowingContextMenu, nonatomic, readonly) BOOL showingContextMenu; 
+- (void)setIconLabelAlpha:(double)alpha;
+@end
