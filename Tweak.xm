@@ -32,7 +32,11 @@ static void prepareHideLabels(id self) {
 
 %end
 
-/* When downloading or updating an app, the new/beta dot become visible. */
+%group iOS12
+/* When downloading or updating an app, the new/beta dot become visible.
+   TODO: Find out if this happens on iOS 13 too (this method is gone and
+         Inspective-C doesn't work on iOS 13).
+*/
 - (void)swapInIcon:(SBApplicationIcon *)appIcon {
     %orig;
 
@@ -40,6 +44,7 @@ static void prepareHideLabels(id self) {
         self.iconLabelAlpha == 0.0f)
         [self setLabelAccessoryViewHidden:YES];
 }
+%end
 
 %end
 
@@ -165,5 +170,7 @@ static void initPrefs() {
 
         if (@available(iOS 13, *))
             %init(iOS13);
+        else
+            %init(iOS12);
     }
 }
