@@ -19,18 +19,28 @@ static void prepareHideLabels(id self) {
     prepareHideLabelsWithDelay(self, delay);
 }
 
-/* Label are becoming visible after dismissing the force touch context
-   menu. This prevents that. */
-%group iOS13
+
 %hook SBIconView
 
+%group iOS13
+/* Label are becoming visible after dismissing the force touch context
+   menu. This prevents that. */
 - (void)setIconLabelAlpha:(double)alpha {
-    if (self.showingContextMenu)
-        return;
-    %orig;
+    if (!self.showingContextMenu)
+        %orig;
 }
 
 %end
+
+/* When downloading or updating an app, the new/beta dot become visible. */
+- (void)swapInIcon:(SBApplicationIcon *)appIcon {
+    %orig;
+
+    if (![[appIcon nodeIdentifier] hasPrefix:@"com.apple.downloadingicon"] &&
+        self.iconLabelAlpha == 0.0f)
+        [self setLabelAccessoryViewHidden:YES];
+}
+
 %end
 
 %hook SBFolderController

@@ -1,3 +1,14 @@
+@interface SBApplicationIcon : NSObject
+- (NSString *)nodeIdentifier;
+@end
+
+@interface SBIconView
+@property (assign, nonatomic) double iconLabelAlpha;
+@property (getter=isShowingContextMenu, nonatomic, readonly) BOOL showingContextMenu; 
+- (void)setIconLabelAlpha:(double)alpha;
+- (void)setLabelAccessoryViewHidden:(BOOL)hidden;
+@end
+
 @interface SBIconListView : UIView
 - (void)setIconsLabelAlpha:(double)alpha;
 @end
@@ -25,10 +36,4 @@
 - (void)_hideLabels;
 - (void)_showLabels;
 - (void)_animateIconLabelsAlpha:(double)alpha;
-@end
-
-
-@interface SBIconView
-@property (getter=isShowingContextMenu, nonatomic, readonly) BOOL showingContextMenu; 
-- (void)setIconLabelAlpha:(double)alpha;
 @end
