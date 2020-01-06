@@ -96,6 +96,13 @@ static void prepareHideLabels(id self) {
     [self _showLabels];
 }
 
+/* Dropping an icon in editing mode leaves the label as visible. */
+- (void)iconListView:(id)arg1 iconDragItem:(id)arg2 willAnimateDropWithAnimator:(id)arg3 {
+    %orig;
+
+    prepareHideLabelsWithDelay(self, MAX(delay, 1.2f));
+}
+
 %new
 - (void)_hideLabels {
     animateIconListViewLabelsAlpha(self.currentIconListView, 0.0f);
