@@ -71,10 +71,20 @@ static void prepareHideLabels(id self) {
 
 %hook SBFolderView
 
+/* Lul, Apple did a spelling mistake in iOS 12 and corrected it in iOS 13. */
+%group didRecieve
+- (void)pageControl:(id)pageControl didRecieveTouchInDirection:(int)direction {
+    %orig;
+    prepareHideLabels(self);
+}
+%end
+
+%group didReceive
 - (void)pageControl:(id)pageControl didReceiveTouchInDirection:(int)direction {
     %orig;
     prepareHideLabels(self);
 }
+%end
 
 - (void)scrollViewDidEndDragging:(id)scrollView willDecelerate:(BOOL)decelerate {
     %orig;
@@ -130,6 +140,12 @@ static void initPrefs() {
 
     if (enabled) {
         %init;
+
+        if ([%c(SBFolderView) instancesRespondToSelector:@selector(pageControl:didRecieveTouchInDirection:)])
+            %init(didRecieve);
+        else
+            %init(didReceive);
+
         if (@available(iOS 13, *))
             %init(iOS13);
     }
