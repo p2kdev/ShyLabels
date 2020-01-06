@@ -48,6 +48,18 @@ static void prepareHideLabels(id self) {
 
 %end
 
+/* Labels are visible when a new app is downloaded. */
+%hook SBApplicationPlaceholderController
+
+- (void)applicationPlaceholdersAdded:(id)arg1 {
+    %orig;
+
+    SBIconController *iconController = [%c(SBIconController) sharedInstance];
+    [iconController.rootFolderController.contentView _hideLabels];
+}
+
+%end
+
 %hook SBFolderController
 
 - (void)folderControllerDidOpen:(id)folderController {
