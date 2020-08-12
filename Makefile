@@ -1,7 +1,9 @@
-TARGET = iphone:clang:9.2
-ARCHS = arm64 arm64e
+PACKAGE_VERSION=$(THEOS_PACKAGE_BASE_VERSION)
 
 include $(THEOS)/makefiles/common.mk
+
+export ARCHS = arm64 arm64e
+export TARGET = iphone:clang:13.0:13.0
 
 TWEAK_NAME = ShyLabels
 $(TWEAK_NAME)_FILES = Tweak.xm

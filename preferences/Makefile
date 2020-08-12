@@ -1,7 +1,7 @@
-TARGET = iphone:clang:9.2
-ARCHS = arm64 arm64e
-
 include $(THEOS)/makefiles/common.mk
+
+export ARCHS = arm64 arm64e
+export TARGET = iphone:clang:13.0:13.0
 
 BUNDLE_NAME = ShyLabels
 $(BUNDLE_NAME)_FILES = $(wildcard *.m)
